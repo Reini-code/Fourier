@@ -1,0 +1,14 @@
+FOURIER PARA TI — versión GitHub Pages
+
+1. Descomprime el ZIP.
+2. Sube index.html a la raíz de un repositorio público en GitHub.
+3. Ve a Settings > Pages.
+4. En Build and deployment elige Deploy from a branch.
+5. Selecciona main y / (root), y guarda.
+6. GitHub mostrará una dirección como https://TUUSUARIO.github.io/NOMBRE-REPOSITORIO/
+
+Para probar localmente puedes abrir index.html en Chrome.
+También puedes servir la carpeta con: python -m http.server 8000 --bind 0.0.0.0
+En el celular, estando en la misma red Wi-Fi, visita http://IP_DE_TU_PC:8000
+
+No necesita PHP, base de datos ni dependencias externas.

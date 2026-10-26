@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#171128">
+<title>Un dibujo para ti ✨</title>
+<style>
+:root{color-scheme:dark;--bg:#130e24;--panel:#211937;--line:#ffffff22;--pink:#f8a7cd;--ink:#f8f0ff;--muted:#c5b8d7}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(ellipse at 15% 0%,#392047,transparent 47%),radial-gradient(ellipse at 90% 90%,#302151,transparent 53%),var(--bg);font:16px/1.45 system-ui,-apple-system,Segoe UI,sans-serif;color:var(--ink)}
+main{max-width:1040px;margin:auto;padding:clamp(18px,4vw,48px)}header{text-align:center;margin:0 0 24px}h1{font-family:Georgia,serif;font-size:clamp(2rem,5vw,3.7rem);line-height:1.1;margin:10px 0}header p{color:var(--muted);margin:10px auto;max-width:660px}.eyebrow{color:#ffbbdc;letter-spacing:.2em;text-transform:uppercase;font-size:.74rem;font-weight:700}
+.layout{display:grid;grid-template-columns:minmax(240px,300px) minmax(0,1fr);gap:18px}.panel,.stage{background:#241b39bb;border:1px solid var(--line);border-radius:24px;box-shadow:0 18px 50px #08041155}.panel{padding:22px}.panel h2{font-size:1.05rem;margin:0 0 21px}label{display:block;margin:17px 0 8px;color:#ebdcf7;font-size:.91rem;font-weight:600}input,select{width:100%;background:#130f25;color:white;border:1px solid #6d587c;border-radius:12px;padding:13px 12px;font:inherit;outline:none}input:focus,select:focus{border-color:#ffa9d2;box-shadow:0 0 0 3px #fda4cb22}input[type=range]{padding:0;accent-color:#f4a5cf}.hint{font-size:.77rem;color:var(--muted);margin-top:7px}.actions{display:flex;flex-wrap:wrap;gap:9px;margin-top:22px}button{cursor:pointer;border:1px solid #ffffff20;border-radius:12px;background:#44305b;color:white;font:600 .91rem system-ui;padding:12px 15px;flex:1;transition:transform .15s,background .15s}button:hover{transform:translateY(-1px);background:#58406c}button.primary{background:#f6a6cf;color:#30182f;border:0}button.primary:hover{background:#ffc2df}.stage{min-width:0;padding:12px;display:flex;flex-direction:column}.canvas-wrap{position:relative;width:100%;aspect-ratio:1.18;min-height:270px;overflow:hidden;border-radius:18px;background:radial-gradient(circle at 50% 48%,#352542,#171328 70%)}canvas{position:absolute;inset:0;width:100%;height:100%;display:block}.topline{display:flex;align-items:center;justify-content:space-between;padding:10px 7px;color:var(--muted);font-size:.85rem;gap:8px}.chip{color:#ffd7e9;background:#71446055;border-radius:99px;padding:4px 10px}.message{text-align:center;padding:12px;color:#edc8e2;font-family:Georgia,serif;font-style:italic}.progress{height:4px;background:#ffffff16;overflow:hidden;border-radius:99px;margin:0 6px 4px}.bar{width:0%;height:100%;background:linear-gradient(90deg,#a687f8,#f7a4cb);transition:width .1s}footer{text-align:center;color:#a899bb;font-size:.8rem;padding:22px} @media(max-width:720px){.layout{grid-template-columns:1fr}.panel{padding:18px}.canvas-wrap{aspect-ratio:1.05;min-height:280px}.stage{padding:9px}}
+</style>
+</head>
+<body><main>
+<header><div class="eyebrow">Una pequeña sorpresa ✧</div><h1>Lo que dibujan los círculos</h1><p>A veces, muchos movimientos pequeños pueden crear algo bonito. Elige una figura o escribe algo y observa cómo aparece, trazo a trazo.</p></header>
+<div class="layout"><section class="panel"><h2>✦ Crea tu dibujo</h2>
+<label for="shape">¿Qué quieres dibujar?</label><select id="shape"><option value="heart">♡ Corazón</option><option value="star">✩ Estrella</option><option value="flower">✿ Flor</option><option value="butterfly">🦋 Mariposa</option><option value="name">✍ Un nombre o palabra</option></select>
+<div id="nameBox" hidden><label for="name">Escribe un nombre</label><input id="name" maxlength="16" placeholder="Por ejemplo: Fernanda" autocomplete="off" value="Fernanda"><p class="hint">Hasta 16 caracteres. Puedes dibujar palabras o nombres.</p></div>
+<label for="speed">Velocidad del dibujo <span id="speedText">Normal</span></label><input type="range" min="1" max="5" id="speed" value="3">
+<div class="actions"><button class="primary" id="start">▶ Dibujar</button><button id="pause">Ⅱ Pausar</button><button id="reset">↺ Reiniciar</button></div>
+<div class="actions"><button id="save">↓ Guardar dibujo</button></div><p class="hint">Los círculos calculan el contorno usando una serie de Fourier. No necesitas instalar ninguna aplicación.</p></section>
+<section class="stage"><div class="topline"><span>Una figura hecha de matemáticas y magia</span><span class="chip" id="status">Listo para dibujar</span></div><div class="canvas-wrap" id="wrap"><canvas id="canvas"></canvas></div><div class="progress"><div class="bar" id="bar"></div></div><div class="message" id="message">Hecho especialmente para ti ♡</div></section></div>
+<footer>Un pequeño detalle que puedes dibujar una y otra vez ✨</footer></main>
+<script>
+(() => {
+'use strict';
+const canvas=document.querySelector('#canvas'), ctx=canvas.getContext('2d');
+const $=s=>document.querySelector(s), shape=$('#shape'),name=$('#name'),nameBox=$('#nameBox'),speed=$('#speed');
+let parts=[],partIndex=0, progress=0,playing=false,previous=0,raf=0,size={w:0,h:0};
+const N=160,TWO=Math.PI*2;
+const radius=1; // Fourier coordinates normalized to unit geometry
+function sample(fn,n=N){return Array.from({length:n},(_,i)=>fn(TWO*i/n));}
+function figure(type){
+if(type==='heart')return sample(t=>({x:16*Math.pow(Math.sin(t),3)/18,y:-(13*Math.cos(t)-5*Math.cos(2*t)-2*Math.cos(3*t)-Math.cos(4*t))/18}));
+if(type==='star')return sample(t=>{const r=.62+.25*Math.cos(5*t);return{x:r*Math.sin(t),y:-r*Math.cos(t)}});
+if(type==='flower')return sample(t=>{const r=.62+.22*Math.cos(7*t);return{x:r*Math.cos(t),y:r*Math.sin(t)}});
+return sample(t=>{let d=Math.exp(Math.cos(t))-2*Math.cos(4*t)-Math.pow(Math.sin(t/12),5);return{x:.23*Math.sin(t)*d,y:-.23*Math.cos(t)*d}});
+}
+function coefficients(points){const len=points.length, arr=[];for(let k=0;k<len;k++){let re=0,im=0;for(let n=0;n<len;n++){const a=-TWO*k*n/len,c=Math.cos(a),s=Math.sin(a);re+=points[n].x*c-points[n].y*s;im+=points[n].x*s+points[n].y*c;}re/=len;im/=len;arr.push({k:k>len/2?k-len:k,re,im,amp:Math.hypot(re,im)});}return arr.sort((a,b)=>b.amp-a.amp).slice(0,85);}
+// Find pixel-edge contours of a rendered glyph; follow their connected directed edges.
+function glyphContours(letter){const off=document.createElement('canvas');off.width=160;off.height=180;const g=off.getContext('2d',{willReadFrequently:true});g.fillStyle='white';g.font='bold 135px Georgia, serif';g.textAlign='center';g.textBaseline='middle';g.fillText(letter,80,91,145);
+const W=off.width,H=off.height,alpha=g.getImageData(0,0,W,H).data;const filled=(x,y)=>x>=0&&y>=0&&x<W&&y<H&&alpha[(y*W+x)*4+3]>110;
+const edges=new Map();function add(ax,ay,bx,by){const a=ax+','+ay,b=bx+','+by;if(!edges.has(a))edges.set(a,[]);edges.get(a).push(b)}
+for(let y=0;y<H;y++)for(let x=0;x<W;x++)if(filled(x,y)){if(!filled(x,y-1))add(x,y,x+1,y);if(!filled(x+1,y))add(x+1,y,x+1,y+1);if(!filled(x,y+1))add(x+1,y+1,x,y+1);if(!filled(x-1,y))add(x,y+1,x,y)}
+const contours=[];while(edges.size){let key=edges.keys().next().value,start=key,pts=[];for(let safety=0;safety<10000;safety++){const [px,py]=key.split(',').map(Number);pts.push({x:px,y:py});const list=edges.get(key);if(!list?.length)break;const next=list.pop();if(!list.length)edges.delete(key);key=next;if(key===start)break;}if(pts.length>25)contours.push(pts)}return contours.sort((a,b)=>b.length-a.length).slice(0,2);}
+function resample(pts,n=N){let dist=[0],total=0;for(let i=1;i<=pts.length;i++){const a=pts[i-1],b=pts[i%pts.length];total+=Math.hypot(b.x-a.x,b.y-a.y);dist.push(total);}if(!total)return[];return Array.from({length:n},(_,k)=>{const target=k*total/n;let lo=0,hi=pts.length;while(lo+1<hi){const mid=(lo+hi)>>1;if(dist[mid]<target)lo=mid;else hi=mid;}const a=pts[lo],b=pts[(lo+1)%pts.length],f=(target-dist[lo])/(dist[lo+1]-dist[lo]||1);return{x:a.x+(b.x-a.x)*f,y:a.y+(b.y-a.y)*f};});}
+function build(){let source=[];if(shape.value==='name'){const letters=[...name.value.trim().slice(0,16)].filter(c=>c!==' ');if(!letters.length){$('#status').textContent='Escribe un nombre';return;}for(const ch of letters){const contours=glyphContours(ch);source.push(contours.length?resample(contours[0]):[]);}const n=source.length;source=source.map(pts=>pts.map(p=>({x:(p.x-80)*(.92/160),y:(p.y-91)*(.92/160)})));}else source=[figure(shape.value)];
+parts=source.filter(p=>p.length).map(points=>({points,coeff:coefficients(points),trail:[]}));partIndex=0;progress=0;playing=false;previous=0;$('#bar').style.width='0%';$('#status').textContent='Preparado';render();}
+function epicycle(coeff,t,collect=false){let x=0,y=0;const circles=[];for(const c of coeff){const ox=x,oy=y,a=c.k*t,xn=c.re*Math.cos(a)-c.im*Math.sin(a),yn=c.re*Math.sin(a)+c.im*Math.cos(a);x+=xn;y+=yn;if(collect)circles.push({x:ox,y:oy,r:c.amp,toX:x,toY:y});}return {x,y,circles};}
+function resize(){const r=$('#wrap').getBoundingClientRect(),dpr=Math.min(devicePixelRatio||1,2);size={w:r.width,h:r.height};canvas.width=Math.round(r.width*dpr);canvas.height=Math.round(r.height*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);render();}
+function render(){if(!size.w)return;const w=size.w,h=size.h;ctx.clearRect(0,0,w,h);const isName=shape.value==='name', count=Math.max(parts.length,1);const scale=(isName?Math.min(w/(count*.85+1),h/1.4):Math.min(w,h)*.35),originX=w/2,originY=h/2;
+ctx.save();ctx.translate(originX,originY);ctx.scale(scale,scale);ctx.lineCap='round';ctx.lineJoin='round';
+parts.forEach((part,i)=>{const shiftX=isName?(i-(count-1)/2)*1.14:0;ctx.save();ctx.translate(shiftX,0);ctx.strokeStyle='#f9b2d7';ctx.lineWidth=2.2/scale;ctx.shadowColor='#ff86c9';ctx.shadowBlur=10/scale;ctx.beginPath();part.trail.forEach((p,j)=>j?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.stroke();ctx.shadowBlur=0;
+if(i===partIndex&&partIndex<parts.length){const state=epicycle(part.coeff,TWO*progress,true);ctx.strokeStyle='#d8bce266';ctx.lineWidth=.9/scale;state.circles.slice(0,20).forEach(c=>{if(c.r>.005){ctx.beginPath();ctx.arc(c.x,c.y,c.r,0,TWO);ctx.stroke();}ctx.beginPath();ctx.moveTo(c.x,c.y);ctx.lineTo(c.toX,c.toY);ctx.stroke();});ctx.fillStyle='#fff0f6';ctx.beginPath();ctx.arc(state.x,state.y,3/scale,0,TWO);ctx.fill();}
+ctx.restore();});ctx.restore();}
+function tick(time){if(!playing)return;if(!previous)previous=time;const delta=Math.min(time-previous,60);previous=time;const speeds=[0,.000055,.00009,.00015,.00024,.00038];let target=progress+delta*speeds[+speed.value];const current=parts[partIndex];if(current){const prev=progress,steps=Math.max(1,Math.ceil((target-prev)*N*2));for(let i=1;i<=steps;i++){const t=Math.min(1,prev+(target-prev)*i/steps);current.trail.push(epicycle(current.coeff,TWO*t));}progress=Math.min(1,target);if(progress>=1){partIndex++;progress=0;if(partIndex>=parts.length){playing=false;$('#status').textContent='¡Terminado! ♡';$('#pause').textContent='Ⅱ Pausar';}}$('#bar').style.width=(((partIndex+progress)/parts.length)*100)+'%';}render();if(playing)raf=requestAnimationFrame(tick);}
+function play(){if(!parts.length)build();if(!parts.length)return;if(partIndex===parts.length)build();playing=true;previous=0;$('#status').textContent='Dibujando…';$('#pause').textContent='Ⅱ Pausar';cancelAnimationFrame(raf);raf=requestAnimationFrame(tick);}
+function reset(){playing=false;cancelAnimationFrame(raf);build();}
+shape.addEventListener('change',()=>{nameBox.hidden=shape.value!=='name';reset()});name.addEventListener('change',reset);$('#start').addEventListener('click',()=>{reset();play()});$('#reset').addEventListener('click',reset);$('#pause').addEventListener('click',()=>{if(playing){playing=false;cancelAnimationFrame(raf);$('#status').textContent='En pausa';$('#pause').textContent='▶ Continuar';}else if(parts.length){play();}});
+speed.addEventListener('input',()=>{$('#speedText').textContent=['','Muy lenta','Lenta','Normal','Rápida','Muy rápida'][+speed.value]});
+$('#save').addEventListener('click',()=>{const a=document.createElement('a');a.download='mi-dibujo-fourier.png';a.href=canvas.toDataURL('image/png');a.click();});
+window.addEventListener('resize',resize);nameBox.hidden=shape.value!=='name';resize();build();play();
+})();
+</script></body></html>
