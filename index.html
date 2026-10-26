@@ -15,7 +15,12 @@ main{max-width:1040px;margin:auto;padding:clamp(18px,4vw,48px)}header{text-align
 <header><div class="eyebrow">Una pequeña sorpresa ✧</div><h1>Lo que dibujan los círculos</h1><p>A veces, muchos movimientos pequeños pueden crear algo bonito. Elige una figura o escribe algo y observa cómo aparece, trazo a trazo.</p></header>
 <div class="layout"><section class="panel"><h2>✦ Crea tu dibujo</h2>
 <label for="shape">¿Qué quieres dibujar?</label><select id="shape"><option value="heart">♡ Corazón</option><option value="star">✩ Estrella</option><option value="flower">✿ Flor</option><option value="butterfly">🦋 Mariposa</option><option value="kitty">🎀 Gatita con moñito</option><option value="name">✍ Un nombre o palabra</option></select>
+<div id="nameBox" hidden><label for="name">Escribe un nombre</label><input id="name" maxlength="16" placeholder="Por ejemplo: Mi princesa" autocomplete="off" value=""><p class="hint">Hasta 16 caracteres. Puedes dibujar palabras o nombres.</p></div>
+<!--
 <div id="nameBox" hidden><label for="name">Escribe un nombre</label><input id="name" maxlength="16" placeholder="Por ejemplo: Fernanda" autocomplete="off" value="Fernanda"><p class="hint">Hasta 16 caracteres. Puedes dibujar palabras o nombres.</p></div>
+
+-->
+
 <label for="speed">Velocidad del dibujo <span id="speedText">Normal</span></label><input type="range" min="1" max="5" id="speed" value="3">
 <div class="actions"><button class="primary" id="start">▶ Dibujar</button><button id="pause">Ⅱ Pausar</button><button id="reset">↺ Reiniciar</button></div>
 <div class="actions"><button id="save">↓ Guardar dibujo</button></div><p class="hint">Los círculos calculan el contorno usando una serie de Fourier. No necesitas instalar ninguna aplicación.</p></section>
