@@ -14,12 +14,12 @@ main{max-width:1040px;margin:auto;padding:clamp(18px,4vw,48px)}header{text-align
 <body><main>
 <header><div class="eyebrow">Una pequeña sorpresa ✧</div><h1>Lo que dibujan los círculos</h1><p>A veces, muchos movimientos pequeños pueden crear algo bonito. Elige una figura o escribe algo y observa cómo aparece, trazo a trazo.</p></header>
 <div class="layout"><section class="panel"><h2>✦ Crea tu dibujo</h2>
-<label for="shape">¿Qué quieres dibujar?</label><select id="shape"><option value="heart">♡ Corazón</option><option value="star">✩ Estrella</option><option value="flower">✿ Flor</option><option value="butterfly">🦋 Mariposa</option><option value="name">✍ Un nombre o palabra</option></select>
+<label for="shape">¿Qué quieres dibujar?</label><select id="shape"><option value="heart">♡ Corazón</option><option value="star">✩ Estrella</option><option value="flower">✿ Flor</option><option value="butterfly">🦋 Mariposa</option><option value="kitty">🎀 Gatita con moñito</option><option value="name">✍ Un nombre o palabra</option></select>
 <div id="nameBox" hidden><label for="name">Escribe un nombre</label><input id="name" maxlength="16" placeholder="Por ejemplo: Fernanda" autocomplete="off" value="Fernanda"><p class="hint">Hasta 16 caracteres. Puedes dibujar palabras o nombres.</p></div>
 <label for="speed">Velocidad del dibujo <span id="speedText">Normal</span></label><input type="range" min="1" max="5" id="speed" value="3">
 <div class="actions"><button class="primary" id="start">▶ Dibujar</button><button id="pause">Ⅱ Pausar</button><button id="reset">↺ Reiniciar</button></div>
 <div class="actions"><button id="save">↓ Guardar dibujo</button></div><p class="hint">Los círculos calculan el contorno usando una serie de Fourier. No necesitas instalar ninguna aplicación.</p></section>
-<section class="stage"><div class="topline"><span>Una figura hecha de matemáticas y magia</span><span class="chip" id="status">Listo para dibujar</span></div><div class="canvas-wrap" id="wrap"><canvas id="canvas"></canvas></div><div class="progress"><div class="bar" id="bar"></div></div><div class="message" id="message">Hecho especialmente para ti ♡</div></section></div>
+<section class="stage"><div class="topline"><span>Una figura hecha de matemáticas y magia</span><span class="chip" id="status">Listo para dibujar</span></div><div class="canvas-wrap" id="wrap"><canvas id="canvas"></canvas></div><div class="progress"><div class="bar" id="bar"></div></div><div class="message" id="message">Un pequeño dibujo para ti ♡</div></section></div>
 <footer>Un pequeño detalle que puedes dibujar una y otra vez ✨</footer></main>
 <script>
 (() => {
@@ -44,16 +44,37 @@ const edges=new Map();function add(ax,ay,bx,by){const a=ax+','+ay,b=bx+','+by;if
 for(let y=0;y<H;y++)for(let x=0;x<W;x++)if(filled(x,y)){if(!filled(x,y-1))add(x,y,x+1,y);if(!filled(x+1,y))add(x+1,y,x+1,y+1);if(!filled(x,y+1))add(x+1,y+1,x,y+1);if(!filled(x-1,y))add(x,y+1,x,y)}
 const contours=[];while(edges.size){let key=edges.keys().next().value,start=key,pts=[];for(let safety=0;safety<10000;safety++){const [px,py]=key.split(',').map(Number);pts.push({x:px,y:py});const list=edges.get(key);if(!list?.length)break;const next=list.pop();if(!list.length)edges.delete(key);key=next;if(key===start)break;}if(pts.length>25)contours.push(pts)}return contours.sort((a,b)=>b.length-a.length).slice(0,2);}
 function resample(pts,n=N){let dist=[0],total=0;for(let i=1;i<=pts.length;i++){const a=pts[i-1],b=pts[i%pts.length];total+=Math.hypot(b.x-a.x,b.y-a.y);dist.push(total);}if(!total)return[];return Array.from({length:n},(_,k)=>{const target=k*total/n;let lo=0,hi=pts.length;while(lo+1<hi){const mid=(lo+hi)>>1;if(dist[mid]<target)lo=mid;else hi=mid;}const a=pts[lo],b=pts[(lo+1)%pts.length],f=(target-dist[lo])/(dist[lo+1]-dist[lo]||1);return{x:a.x+(b.x-a.x)*f,y:a.y+(b.y-a.y)*f};});}
-function build(){let source=[];if(shape.value==='name'){const letters=[...name.value.trim().slice(0,16)].filter(c=>c!==' ');if(!letters.length){$('#status').textContent='Escribe un nombre';return;}for(const ch of letters){const contours=glyphContours(ch);source.push(contours.length?resample(contours[0]):[]);}const n=source.length;source=source.map(pts=>pts.map(p=>({x:(p.x-80)*(.92/160),y:(p.y-91)*(.92/160)})));}else source=[figure(shape.value)];
+// Gatita original de contorno, con orejas, moño, carita y bigotes.
+// Cada parte se dibuja mediante los mismos coeficientes de Fourier.
+function oval(cx,cy,rx,ry,n=110){return sample(t=>({x:cx+rx*Math.cos(t),y:cy+ry*Math.sin(t)}),n)}
+function smoothLoop(nodes, per=12){const pts=[];for(let i=0;i<nodes.length;i++){
+const a=nodes[(i-1+nodes.length)%nodes.length],b=nodes[i],c=nodes[(i+1)%nodes.length],d=nodes[(i+2)%nodes.length];
+for(let j=0;j<per;j++){let t=j/per,t2=t*t,t3=t2*t;
+const v=(q)=>.5*((2*b[q])+(-a[q]+c[q])*t+(2*a[q]-5*b[q]+4*c[q]-d[q])*t2+(-a[q]+3*b[q]-3*c[q]+d[q])*t3);
+pts.push({x:v('x'),y:v('y')});}}
+return resample(pts)}
+function kittyPaths(){
+const head=smoothLoop([[-.81,-.15],[-.81,-.69],[-.61,-.65],[-.37,-.48],[0,-.53],[.37,-.48],[.61,-.65],[.81,-.69],[.81,-.15],[.86,.18],[.74,.51],[.43,.72],[0,.79],[-.43,.72],[-.74,.51],[-.86,.18]]);
+const bowLeft=smoothLoop([[.23,-.55],[.03,-.78],[-.02,-.99],[.26,-.92],[.44,-.77],[.37,-.62]]);
+const bowRight=smoothLoop([[.43,-.72],[.62,-.95],[.85,-.93],[.85,-.68],[.58,-.54],[.44,-.61]]);
+const knot=oval(.405,-.665,.105,.11);
+const leftEye=oval(-.34,.13,.042,.095),rightEye=oval(.34,.13,.042,.095);
+const nose=oval(0,.36,.105,.065);
+function whisker(x1,y1,x2,y2){const a={x:x1,y:y1},b={x:x2,y:y2};return resample([a,b]);}
+return [head,bowLeft,bowRight,knot,leftEye,rightEye,nose,
+ whisker(-.58,.25,-.96,.17),whisker(-.59,.36,-1.01,.37),whisker(-.57,.47,-.94,.58),
+ whisker(.58,.25,.96,.17),whisker(.59,.36,1.01,.37),whisker(.57,.47,.94,.58)];
+}
+function build(){let source=[];if(shape.value==='name'){const letters=[...name.value.trim().slice(0,16)].filter(c=>c!==' ');if(!letters.length){$('#status').textContent='Escribe un nombre';return;}for(const ch of letters){const contours=glyphContours(ch);source.push(contours.length?resample(contours[0]):[]);}const n=source.length;source=source.map(pts=>pts.map(p=>({x:(p.x-80)*(.92/160),y:(p.y-91)*(.92/160)})));}else source=shape.value==='kitty'?kittyPaths():[figure(shape.value)];
 parts=source.filter(p=>p.length).map(points=>({points,coeff:coefficients(points),trail:[]}));partIndex=0;progress=0;playing=false;previous=0;$('#bar').style.width='0%';$('#status').textContent='Preparado';render();}
 function epicycle(coeff,t,collect=false){let x=0,y=0;const circles=[];for(const c of coeff){const ox=x,oy=y,a=c.k*t,xn=c.re*Math.cos(a)-c.im*Math.sin(a),yn=c.re*Math.sin(a)+c.im*Math.cos(a);x+=xn;y+=yn;if(collect)circles.push({x:ox,y:oy,r:c.amp,toX:x,toY:y});}return {x,y,circles};}
 function resize(){const r=$('#wrap').getBoundingClientRect(),dpr=Math.min(devicePixelRatio||1,2);size={w:r.width,h:r.height};canvas.width=Math.round(r.width*dpr);canvas.height=Math.round(r.height*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);render();}
-function render(){if(!size.w)return;const w=size.w,h=size.h;ctx.clearRect(0,0,w,h);const isName=shape.value==='name', count=Math.max(parts.length,1);const scale=(isName?Math.min(w/(count*.85+1),h/1.4):Math.min(w,h)*.35),originX=w/2,originY=h/2;
+function render(){if(!size.w)return;const w=size.w,h=size.h;ctx.clearRect(0,0,w,h);const isName=shape.value==='name', count=Math.max(parts.length,1);const scale=(isName?Math.min(w/(count*.85+1),h/1.4):Math.min(w,h)*(shape.value==='kitty'?.39:.35)),originX=w/2,originY=h/2;
 ctx.save();ctx.translate(originX,originY);ctx.scale(scale,scale);ctx.lineCap='round';ctx.lineJoin='round';
 parts.forEach((part,i)=>{const shiftX=isName?(i-(count-1)/2)*1.14:0;ctx.save();ctx.translate(shiftX,0);ctx.strokeStyle='#f9b2d7';ctx.lineWidth=2.2/scale;ctx.shadowColor='#ff86c9';ctx.shadowBlur=10/scale;ctx.beginPath();part.trail.forEach((p,j)=>j?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.stroke();ctx.shadowBlur=0;
 if(i===partIndex&&partIndex<parts.length){const state=epicycle(part.coeff,TWO*progress,true);ctx.strokeStyle='#d8bce266';ctx.lineWidth=.9/scale;state.circles.slice(0,20).forEach(c=>{if(c.r>.005){ctx.beginPath();ctx.arc(c.x,c.y,c.r,0,TWO);ctx.stroke();}ctx.beginPath();ctx.moveTo(c.x,c.y);ctx.lineTo(c.toX,c.toY);ctx.stroke();});ctx.fillStyle='#fff0f6';ctx.beginPath();ctx.arc(state.x,state.y,3/scale,0,TWO);ctx.fill();}
 ctx.restore();});ctx.restore();}
-function tick(time){if(!playing)return;if(!previous)previous=time;const delta=Math.min(time-previous,60);previous=time;const speeds=[0,.000055,.00009,.00015,.00024,.00038];let target=progress+delta*speeds[+speed.value];const current=parts[partIndex];if(current){const prev=progress,steps=Math.max(1,Math.ceil((target-prev)*N*2));for(let i=1;i<=steps;i++){const t=Math.min(1,prev+(target-prev)*i/steps);current.trail.push(epicycle(current.coeff,TWO*t));}progress=Math.min(1,target);if(progress>=1){partIndex++;progress=0;if(partIndex>=parts.length){playing=false;$('#status').textContent='¡Terminado! ♡';$('#pause').textContent='Ⅱ Pausar';}}$('#bar').style.width=(((partIndex+progress)/parts.length)*100)+'%';}render();if(playing)raf=requestAnimationFrame(tick);}
+function tick(time){if(!playing)return;if(!previous)previous=time;const delta=Math.min(time-previous,60);previous=time;const speeds=[0,.000055,.00009,.00015,.00024,.00038];let target=progress+delta*speeds[+speed.value];const current=parts[partIndex];if(current){const prev=progress,steps=Math.max(1,Math.ceil((target-prev)*N*2));for(let i=1;i<=steps;i++){const t=Math.min(1,prev+(target-prev)*i/steps);current.trail.push(epicycle(current.coeff,TWO*t));}progress=Math.min(1,target);if(progress>=1){partIndex++;progress=0;if(partIndex>=parts.length){playing=false;$('#status').textContent='¡Terminado! ✨';$('#pause').textContent='Ⅱ Pausar';}}$('#bar').style.width=(((partIndex+progress)/parts.length)*100)+'%';}render();if(playing)raf=requestAnimationFrame(tick);}
 function play(){if(!parts.length)build();if(!parts.length)return;if(partIndex===parts.length)build();playing=true;previous=0;$('#status').textContent='Dibujando…';$('#pause').textContent='Ⅱ Pausar';cancelAnimationFrame(raf);raf=requestAnimationFrame(tick);}
 function reset(){playing=false;cancelAnimationFrame(raf);build();}
 shape.addEventListener('change',()=>{nameBox.hidden=shape.value!=='name';reset()});name.addEventListener('change',reset);$('#start').addEventListener('click',()=>{reset();play()});$('#reset').addEventListener('click',reset);$('#pause').addEventListener('click',()=>{if(playing){playing=false;cancelAnimationFrame(raf);$('#status').textContent='En pausa';$('#pause').textContent='▶ Continuar';}else if(parts.length){play();}});
